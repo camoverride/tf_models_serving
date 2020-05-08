@@ -26,7 +26,7 @@ docker run -t --rm -p 8501:8501 \
     -e MODEL_NAME=emotion_model \
     emotion_model_1 &
 
-docker run -t --rm -p 8080:8080 gcr.io/emotion-model-1-276322/emotion-model-1 &
+docker run -t --rm -p 8080:8080 gcr.io/emotion-model-1-276322/emotion-model-1:v0.1 &
 ~~~
 
 Send a curl request (Python):
