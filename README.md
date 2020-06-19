@@ -2,32 +2,26 @@
 
 This repo is where my tensorflow servables live.
 
-## Setup
+## Overview
 
-Take a SavedModel, build it to a docker image, push to GCP, and serve it:
+Take a SavedModel, build it to a docker image, push to GCP, and serve it.
+
+Models live in the `models` folder, and should all be in the format of `models/<model_name>/<model_version>`.
+
+Make sure that models are created with the `serving_default` signature, or they won't be able to be served.
 
 - [Build docs](https://www.tensorflow.org/tfx/serving/docker)
 - [Deploy docs](https://www.tensorflow.org/tfx/serving/serving_kubernetes)
-- `docker pull tensorflow/serving`
-- `docker run -d --name serving_base tensorflow/serving`
-<!-- - `docker cp models/emotion_model serving_base:/models/emotion_model`
-- `docker commit --change "ENV MODEL_NAME emotion_model" serving_base emotion_model_1` -->
-- docker build -t gcr.io/emotion-model-1-276322/emotion-model-1:v0.1 .
-- docker push gcr.io/emotion-model-1-276322/emotion-model-1:v0.1
-- SERVE IT
+
+## Use this Repo
+
+Build an image: `docker build -t camoverride/face-models:v0.1 .`
+
+Run it: `docker run -t --rm -p 8080:8080 camoverride/face-models:v0.1 --model_config_file=/models/models.config &`
+
+Not: port `8500` is open to public... `8501` isn't.
 
 ## Test Locally
-
-Start the server:
-
-~~~shell
-docker run -t --rm -p 8501:8501 \
-    -v "/Users/cameronsmith/repos/tf_models_serving/models/emotion_model:/models/emotion_model" \
-    -e MODEL_NAME=emotion_model \
-    emotion_model_1 &
-
-docker run -t --rm -p 8080:8080 gcr.io/emotion-model-1-276322/emotion-model-1:v0.1 &
-~~~
 
 Send a curl request (Python):
 
@@ -37,19 +31,25 @@ import numpy
 import requests
 
 url = "localhost"
-# url = "34.83.242.28"
+port = "8080"
+model = "gender_model"
+# model = "emotion_model"
 
-# Mimic the shape of the incoming data. First axis are number of images (should always be 1).
-image_data = numpy.ones([1, 48, 48, 1])
+# Mimic the shape of the incoming data. First axis are number of images.
+image_data = numpy.random.rand(3, 224, 224, 3) # for gender_model
+# image_data = numpy.random.rand(3, 48, 48, 1) # for emotion_model
 
 data = json.dumps({"signature_name": "serving_default",
                    "instances": image_data.tolist()})
 headers = {"content-type": "application/json"}
-json_response = requests.post(f"http://{url}:8080/v1/models/model:predict",
-                              data=data, headers=headers)
+json_response = requests.post(f"http://{url}:{port}/v1/models/{model}:predict", data=data, headers=headers)
 
 predictions = numpy.array(json.loads(json_response.text)["predictions"])
 
-print(predictions[0])
+print(predictions)
 ~~~
- # 8500 is open to public... 8501 isn't
+
+## To-do list
+
+- Models accept differently-sized inputs -- these need to be standardized.
+- The model server is not taking advantage of GPU, so it might be a little slow.
